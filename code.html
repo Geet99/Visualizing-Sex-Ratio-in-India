@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Sex Ratio Visualization</title>
+        <script type="text/javascript" src="d3/d3.min.js" charset="utf-8"></script>
+        <style>
+            body {
+                position: absolute;
+                font-family: "Proxima Nova", "Montserrat", sans-serif;
+            }
+            h2 {
+                position: absolute;
+                left: 10px;
+                font-size: 0.8em;
+                font-weight: 100;
+                color: "black";
+                font-family: garamond,serif;
+            }
+            h3 {
+                position: absolute;
+                right: 10px;
+                font-size: 1em;
+                font-weight: bold;
+                font-style: italic;
+                font-family: "Times New Roman", Times, serif;;
+                color: rgb(54, 13, 7);
+            }
+        </style>    
+    </head>
+    
+    <body>
+        <h3> Sex Ratio of (Urban/Rural) <br /> Population in 2001 </h3>
+        <h2 id="h1"></h2>
+        <svg id="container1" height="500" width="500" style="border: 4px solid rgb(212, 12, 12);"></svg>
+        <br /><br />
+
+        <h3> Sex Ratio of (Urban/Rural) <br /> Population in 2011 </h3>
+        <h2 id="h2"></h2>
+        <svg id="container2" height="500" width="500" style="border: 4px solid rgb(212, 12, 12);"></svg>
+        <br /><br />
+        
+        <h3> Sex Ratio of Total <br /> Population in 2001 </h3>
+        <h2 id="h3"></h2>
+        <svg id="container3" height="500" width="500" style="border: 4px solid rgb(212, 12, 12);"></svg>
+        <br /><br />
+
+        <h3> Sex Ratio of Total <br /> Population in 2011 </h3>
+        <h2 id="h4"></h2>
+        <svg id="container4" height="500" width="500" style="border: 4px solid rgb(212, 12, 12);"></svg>
+        
+        <script>
+            let drawspace1 = d3.select("#container1");
+            let drawspace2 = d3.select("#container2");
+            let drawspace3 = d3.select("#container3");
+            let drawspace4 = d3.select("#container4");
+
+            Promise.all([
+                d3.json("states.geo.json"),
+                d3.csv("State-wise-SR.csv")
+            ]).then(showData);
+
+            function showData(datasources){
+                console.log(datasources);
+                let mapInfo = datasources[0];
+                let ratioInfo = datasources[1];
+                let myProjection = d3.geoMercator().scale(900).translate([-1050, 620]);
+                let geoPath = d3.geoPath().projection(myProjection);
+
+                //Putting relevant fields from ratioInfo to mapInfo
+                 
+                let one_ratio = {}
+                for (let c of ratioInfo)
+                {
+                    let state = c.State;
+                    one_ratio[state] = (+c["Sex ratio of total population - Urban - 2001"] / +c["Sex ratio of total population - Rural - 2001"]);
+                }
+
+                let eleven_ratio = {}
+                for (let c of ratioInfo)
+                {
+                    let state = c.State;
+                    eleven_ratio[state] = (+c["Sex ratio of total population - Urban - 2011"] / +c["Sex ratio of total population - Rural - 2011"]);
+                }
+
+                let one_total = {}
+                for (let c of ratioInfo)
+                {
+                    let state = c.State;
+                    one_total[state] = +c["Sex ratio of total population - Total - 2001"];
+                }
+
+                let eleven_total = {}
+                for (let c of ratioInfo)
+                {
+                    let state = c.State;
+                    eleven_total[state] = +c["Sex ratio of total population - Total - 2011"];
+                }
+
+                let one_urban = {}
+                for (let c of ratioInfo)
+                {
+                    let state = c.State;
+                    one_urban[state] = +c["Sex ratio of total population - Urban - 2001"];
+                }
+
+                let eleven_urban = {}
+                for (let c of ratioInfo)
+                {
+                    let state = c.State;
+                    eleven_urban[state] = +c["Sex ratio of total population - Urban - 2011"];
+                }
+
+                let one_rural = {}
+                for (let c of ratioInfo)
+                {
+                    let state = c.State;
+                    one_rural[state] = +c["Sex ratio of total population - Rural - 2001"];
+                }
+
+                let eleven_rural = {}
+                for (let c of ratioInfo)
+                {
+                    let state = c.State;
+                    eleven_rural[state] = +c["Sex ratio of total population - Rural - 2011"];
+                }
+
+                mapInfo.features = mapInfo.features.map(d => {
+                    let state = d.id;
+                    let oneR = one_ratio[state]
+                    let elevenR = eleven_ratio[state]
+                    let oneT = one_total[state]
+                    let elevenT = eleven_total[state]
+                    let oneRu = one_rural[state]
+                    let elevenRu = eleven_rural[state]
+                    let oneUr = one_urban[state]
+                    let elevenUr = eleven_urban[state]
+                    d.properties.oneRatio = oneR;
+                    d.properties.elevenRatio = elevenR;
+                    d.properties.oneTotal = oneT;
+                    d.properties.elevenTotal = elevenT;
+                    d.properties.oneUrban = oneUr;
+                    d.properties.elevenUrban = elevenUr;
+                    d.properties.oneRural = oneRu;
+                    d.properties.elevenRural = elevenRu;
+                    return d;
+                })
+                console.log(mapInfo.features);
+
+                //Setting appropriate scale for all the maps
+
+                let maxOneRatio = d3.max(mapInfo.features, d => d.properties.oneRatio)
+                let maxElevenRatio = d3.max(mapInfo.features, d => d.properties.elevenRatio)
+                let maxOneTotal = d3.max(mapInfo.features, d => d.properties.oneTotal)
+                let maxElevenTotal = d3.max(mapInfo.features, d => d.properties.elevenTotal)
+
+                let cOneScale = d3.scaleLinear().domain([0, 0.9, 1, maxOneRatio]).range(["white", "red", "yellow", "green"])
+                let cElevenScale = d3.scaleLinear().domain([0, 0.9, 1, maxElevenRatio]).range(["white", "red", "yellow", "green"])
+                let tOneScale = d3.scaleLinear().domain([800, 900, maxOneTotal]).range(["white", "cyan", "green"])
+                let tElevenScale = d3.scaleLinear().domain([800, 900, maxElevenTotal]).range(["white", "cyan", "green"])
+
+                //Drawing the Maps
+
+                drawspace1.selectAll("path")
+                    .data(mapInfo.features)
+                    .enter()
+                    .append("path")
+                    .attr("d", d=>geoPath(d))
+                    .attr("stroke", "black")
+                    .attr("fill", d => cOneScale(d.properties.oneRatio))
+                    .on("mouseover", function (e, d) {
+                        this.style.opacity = 0.4;
+                        d3.select("#h1").html("State: " + d.id + "</br>" + "Total: " + d.properties.oneTotal + "<br/>" + "Urban: " + d.properties.oneUrban + "<br/>" + "Rural: " + d.properties.oneRural)
+                    })
+                    .on("mouseout", function(d) {	
+                        this.style.opacity = 1;	
+                        d3.select("#h1").text("");
+                    });
+
+                drawspace2.selectAll("path")
+                    .data(mapInfo.features)
+                    .enter()
+                    .append("path")
+                    .attr("d", d=>geoPath(d))
+                    .attr("stroke", "black")
+                    .attr("fill", d => cElevenScale(d.properties.elevenRatio))
+                    .on("mouseover", function (e, d) {
+                        this.style.opacity = 0.4;
+                        d3.select("#h2").html("State: " + d.id + "</br>" + "Total: " + d.properties.elevenTotal + "<br/>" + "Urban: " + d.properties.elevenUrban + "<br/>" + "Rural: " + d.properties.elevenRural)
+                    })
+                    .on("mouseout", function(d) {	
+                        this.style.opacity = 1;	
+                        d3.select("#h2").text("");
+                    });
+
+                drawspace3.selectAll("path")
+                    .data(mapInfo.features)
+                    .enter()
+                    .append("path")
+                    .attr("d", d=>geoPath(d))
+                    .attr("stroke", "black")
+                    .attr("fill", d => tOneScale(d.properties.oneTotal))
+                    .on("mouseover", function (e, d) {
+                        this.style.opacity = 0.4;
+                        d3.select("#h3").html("State: " + d.id + "</br>" + "Total: " + d.properties.oneTotal + "<br/>" + "Urban: " + d.properties.oneUrban + "<br/>" + "Rural: " + d.properties.oneRural)
+                    })
+                    .on("mouseout", function(d) {	
+                        this.style.opacity = 1;	
+                        d3.select("#h3").text("");
+                    });
+
+                drawspace4.selectAll("path")
+                    .data(mapInfo.features)
+                    .enter()
+                    .append("path")
+                    .attr("d", d=>geoPath(d))
+                    .attr("stroke", "black")
+                    .attr("fill", d => tElevenScale(d.properties.elevenTotal))
+                    .on("mouseover", function (e, d) {
+                        this.style.opacity = 0.4;
+                        d3.select("#h4").html("State: " + d.id + "</br>" + "Total: " + d.properties.oneTotal + "<br/>" + "Urban: " + d.properties.oneUrban + "<br/>" + "Rural: " + d.properties.oneRural)
+                    })
+                    .on("mouseout", function(d) {	
+                        this.style.opacity = 1;	
+                        d3.select("#h4").text("");
+                    });
+
+                //Appending the Labels
+
+                var svgLegend1 = drawspace1.append('svg')
+                var defs1 = svgLegend1.append('defs');
+
+                var linearGradient1 = defs1.append('linearGradient')
+                    .attr('id', 'linear-gradient1');
+
+                linearGradient1
+                    .attr("x1", "0%")
+                    .attr("y1", "0%")
+                    .attr("x2", "100%")
+                    .attr("y2", "0%");
+
+                linearGradient1.selectAll("stop")
+                    .data([
+                        {offset: "0%", color: "white"},
+                        {offset: "55%", color: "red"},
+                        {offset: "68%", color: "yellow"},
+                        {offset: "100%", color: "green"}
+                    ])
+                    .enter().append("stop")
+                    .attr("offset", function(d) { 
+                        return d.offset; 
+                    })
+                    .attr("stop-color", function(d) { 
+                        return d.color; 
+                    });
+
+                svgLegend1.append("text")
+                    .attr("class", "legendTitle")
+                    .attr("x", 420)
+                    .attr("y", 440)
+                    .style("text-anchor", "left")
+                    .text("Legend");
+
+                svgLegend1.append("rect")
+                    .attr("x", 250)
+                    .attr("y", 450)
+                    .attr("width", 230)
+                    .attr("height", 20)
+                    .style("fill", "url(#linear-gradient1)")
+                    .style("stroke", "black");
+
+                var xLeg1 = d3.scaleLinear()
+                    .domain([0, 1.5])
+                    .range([250, 480]);
+
+                var axisLeg1 = d3.axisBottom(xLeg1)
+                    .tickValues([0, 0.9, 1, 1.5])
+
+                svgLegend1
+                    .attr("class", "axis")
+                    .append("g")
+                    .attr("transform", "translate(0, 470)")
+                    .attr("x", 150)
+                    .attr("y", 700)
+                    .call(axisLeg1);
+
+
+                var svgLegend2 = drawspace2.append('svg')
+                var defs2 = svgLegend2.append('defs');
+
+                var linearGradient2 = defs2.append('linearGradient')
+                    .attr('id', 'linear-gradient2');
+
+                linearGradient2
+                    .attr("x1", "0%")
+                    .attr("y1", "0%")
+                    .attr("x2", "100%")
+                    .attr("y2", "0%");
+
+                linearGradient2.selectAll("stop")
+                    .data([
+                        {offset: "0%", color: "white"},
+                        {offset: "55%", color: "red"},
+                        {offset: "68%", color: "yellow"},
+                        {offset: "100%", color: "green"}
+                    ])
+                    .enter().append("stop")
+                    .attr("offset", function(d) { 
+                        return d.offset; 
+                    })
+                    .attr("stop-color", function(d) { 
+                        return d.color; 
+                    });
+
+                svgLegend2.append("text")
+                    .attr("class", "legendTitle")
+                    .attr("x", 420)
+                    .attr("y", 440)
+                    .style("text-anchor", "left")
+                    .text("Legend");
+
+                svgLegend2.append("rect")
+                    .attr("x", 250)
+                    .attr("y", 450)
+                    .attr("width", 230)
+                    .attr("height", 20)
+                    .style("fill", "url(#linear-gradient2)")
+                    .style("stroke", "black");
+
+                var xLeg2 = d3.scaleLinear()
+                    .domain([0, 1.5])
+                    .range([250, 480]);
+
+                var axisLeg2 = d3.axisBottom(xLeg2)
+                    .tickValues([0, 0.9, 1, 1.5])
+
+                svgLegend2
+                    .attr("class", "axis")
+                    .append("g")
+                    .attr("transform", "translate(0, 470)")
+                    .attr("x", 150)
+                    .attr("y", 700)
+                    .call(axisLeg2);
+
+
+                var svgLegend3 = drawspace3.append('svg')
+                var defs3 = svgLegend3.append('defs');
+
+                var linearGradient3 = defs3.append('linearGradient')
+                    .attr('id', 'linear-gradient3');
+
+                linearGradient3
+                    .attr("x1", "0%")
+                    .attr("y1", "0%")
+                    .attr("x2", "100%")
+                    .attr("y2", "0%");
+
+                linearGradient3.selectAll("stop")
+                    .data([
+                        {offset: "0%", color: "white"},
+                        {offset: "45%", color: "cyan"},
+                        {offset: "100%", color: "green"}
+                    ])
+                    .enter().append("stop")
+                    .attr("offset", function(d) { 
+                        return d.offset; 
+                    })
+                    .attr("stop-color", function(d) { 
+                        return d.color; 
+                    });
+                    
+                svgLegend3.append("text")
+                    .attr("class", "legendTitle")
+                    .attr("x", 420)
+                    .attr("y", 440)
+                    .style("text-anchor", "left")
+                    .text("Legend");
+
+                svgLegend3.append("rect")
+                    .attr("x", 250)
+                    .attr("y", 450)
+                    .attr("width", 230)
+                    .attr("height", 20)
+                    .style("fill", "url(#linear-gradient3)")
+                    .style("stroke", "black");
+                
+                var xLeg3 = d3.scaleLinear()
+                    .domain([800, 1100])
+                    .range([250, 480]);
+
+                var axisLeg3 = d3.axisBottom(xLeg3)
+                    .tickValues([800, 900, 1100])
+
+                svgLegend3
+                    .attr("class", "axis")
+                    .append("g")
+                    .attr("transform", "translate(0, 470)")
+                    .attr("x", 150)
+                    .attr("y", 700)
+                    .call(axisLeg3);
+
+                    
+                var svgLegend4 = drawspace4.append('svg')
+                var defs4 = svgLegend4.append('defs');
+
+                var linearGradient4 = defs4.append('linearGradient')
+                    .attr('id', 'linear-gradient4');
+
+                linearGradient4
+                    .attr("x1", "0%")
+                    .attr("y1", "0%")
+                    .attr("x2", "100%")
+                    .attr("y2", "0%");
+
+                linearGradient4.selectAll("stop")
+                    .data([
+                        {offset: "0%", color: "white"},
+                        {offset: "45%", color: "cyan"},
+                        {offset: "100%", color: "green"}
+                    ])
+                    .enter().append("stop")
+                    .attr("offset", function(d) { 
+                        return d.offset; 
+                    })
+                    .attr("stop-color", function(d) { 
+                        return d.color; 
+                    });
+                    
+                svgLegend4.append("text")
+                    .attr("class", "legendTitle")
+                    .attr("x", 420)
+                    .attr("y", 440)
+                    .style("text-anchor", "left")
+                    .text("Legend");
+
+                svgLegend4.append("rect")
+                    .attr("x", 250)
+                    .attr("y", 450)
+                    .attr("width", 230)
+                    .attr("height", 20)
+                    .style("fill", "url(#linear-gradient4)")
+                    .style("stroke", "black");
+                
+                var xLeg4 = d3.scaleLinear()
+                    .domain([800, 1100])
+                    .range([250, 480]);
+
+                var axisLeg4 = d3.axisBottom(xLeg4)
+                    .tickValues([800, 900, 1100])
+
+                svgLegend4
+                    .attr("class", "axis")
+                    .append("g")
+                    .attr("transform", "translate(0, 470)")
+                    .attr("x", 150)
+                    .attr("y", 700)
+                    .call(axisLeg4);
+                
+            }
+        </script>
+    </body>
+</html>
